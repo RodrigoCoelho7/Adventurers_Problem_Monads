@@ -12,9 +12,7 @@ type Objects = Either Adventurer ()
 -- To implement 
 getTimeAdv :: Adventurer -> Int
 getTimeAdv P1 = 1
-getTimeAdv P2 = 2
-getTimeAdv P5 = 5
-getTimeAdv P10 = 10
+https://github.com/RodrigoCoelho7/Adventurers_Problem_Monads.git
 
 {-- The state of the game, i.e. the current position of each adventurer
 + the lantern. The function (const False) represents the initial state
@@ -56,37 +54,8 @@ mChangeState os s = foldr changeState s os
 {-- For a given state of the game, the function presents all the
 possible moves that the adventurers can make.  --}
 -- To implement
-verify_side :: [Objects] -> State -> Bool
-verify_side (h:t) s = let b = s h in all (\x->s x==b) t
-
-obtain_adventure :: Objects -> Adventurer
-obtain_adventure (Left a) = a
-
-cross_Adventures :: [Objects] -> State -> Duration State
-cross_Adventures a s= let o = [(Right ())]++a
-                          b = verify_side o s in if b then return (mChangeState o s) else return s
-
-oneAdventurer = [(Left P1),(Left P2),(Left P5),(Left P10)]
-
-obtain_twoAdveturers :: [Objects] -> [[Objects]]
-obtain_twoAdveturers [] = []
-obtain_twoAdveturers (h:t) = (map (\x -> [h,x]) t) ++ (obtain_twoAdveturers t)
-
-twoAdventurers = obtain_twoAdveturers oneAdventurer
-
-remDur :: Duration State -> (Int, State)
-remDur (Duration (n,s)) = (n,s)
-
-createDur :: Int -> (Int,State) -> Duration State
-createDur m (n,s) = Duration (m+n,s)
-
-msum :: Int -> Duration State -> Duration State
-msum n t= let t' = remDur t in createDur n t'
-
 allValidPlays :: State -> ListDur State
-allValidPlays s =  let oneL = map (\x -> msum (getTimeAdv (obtain_adventure x)) (cross_Adventures [x] s)) oneAdventurer
-                       twoL = map (\x->msum (maximum (map getTimeAdv (map obtain_adventure x))) (cross_Adventures x s)) twoAdventurers in LD (oneL++twoL)
-
+allValidPlays = undefined
 
 {-- For a given number n and initial state, the function calculates
 all possible n-sequences of moves that the adventures can make --}
