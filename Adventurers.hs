@@ -79,7 +79,7 @@ msum :: Int -> Duration State -> Duration State
 msum n t= let t' = remDur t in createDur n t'
 
 allValidPlays :: State -> ListDur State
-allValidPlays s =  let oneL = map (\x -> msum (getTimeAdv (obtain_adventure x)) (cross_Adventures [x] s)) oneAdventurer
+allValidPlays s =  let oneL = map (\x->msum (getTimeAdv (obtain_adventure x)) (cross_Adventures [x] s)) oneAdventurer
                        twoL = map (\x->msum (maximum (map getTimeAdv (map obtain_adventure x))) (cross_Adventures x s)) twoAdventurers in LD (oneL++twoL)
 
 
@@ -133,9 +133,13 @@ instance Applicative ListDur where
 -- To implement
 instance Monad ListDur where
    return = pure
+<<<<<<< Updated upstream
    l >>= k = LD $ do x <- map remDur (remLD l)
                      g x where
                         g(n,x) = let u = (map remDur (remLD (k x))) in map (\(n',x) -> Duration (n + n', x)) u
+=======
+   l >>= k = undefined
+>>>>>>> Stashed changes
 
 manyChoice :: [ListDur a] -> ListDur a
 manyChoice = LD . concat . (map remLD)
