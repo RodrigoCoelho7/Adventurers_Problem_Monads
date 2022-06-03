@@ -64,7 +64,9 @@ obtain_adventure (Left a) = a
 
 cross_Adventures :: [Objects] -> State -> Duration State
 cross_Adventures a s= let o = [(Right ())]++a
-                          b = verify_side o s in if b then return (mChangeState o s) else return s
+                          a_ = map obtain_adventure a  
+                          t_ = map getTimeAdv a_
+                          b = verify_side o s in if b then  Duration (maximum t_ ,(mChangeState o s)) else return s
 
 oneAdventurer = [(Left P1),(Left P2),(Left P5),(Left P10)]
 
@@ -75,31 +77,42 @@ obtain_twoAdveturers (h:t) = (map (\x -> [h,x]) t) ++ (obtain_twoAdveturers t)
 twoAdventurers = obtain_twoAdveturers oneAdventurer
 
 
-msum :: Int -> Duration State -> Duration State
-msum n t= let t' = remDur t in createDur n t'
-
 allValidPlays :: State -> ListDur State
-allValidPlays s =  let oneL = map (\x->msum (getTimeAdv (obtain_adventure x)) (cross_Adventures [x] s)) oneAdventurer
-                       twoL = map (\x->msum (maximum (map getTimeAdv (map obtain_adventure x))) (cross_Adventures x s)) twoAdventurers in LD (oneL++twoL)
+allValidPlays s = let oneL = map (\x->cross_Adventures [x] s) oneAdventurer
+                      twoL = map (\x->cross_Adventures x s) twoAdventurers in LD (oneL++twoL)
 
 
 {-- For a given number n and initial state, the function calculates
 all possible n-sequences of moves that the adventures can make --}
 -- To implement 
 exec :: Int -> State -> ListDur State
-exec = undefined
+exec 0 s = return s
+exec n s = do s1 <- allValidPlays s
+              exec (n-1) s1
 
 {-- Is it possible for all adventurers to be on the other side
 in <=17 min and not exceeding 5 moves ? --}
 -- To implement
+
+verify_result :: Int -> ListDur State -> Bool
+verify_result n ld = let o = oneAdventurer ++ [(Right ())]
+                         ld_ = remLD ld
+                         d = map remDur ld_ 
+                         b_ = map (\(t,s)-> (t<=n && all (\y->s y ==True) o)) d in all (\x->x==True) b_
+
+leqN :: Int -> Int -> Bool
+leqN n_ 0 = False
+leqN n_ n = let ld = exec n gInit
+                b = verify_result n_ ld in b || leqN n_ (n-1)
+
 leq17 :: Bool
-leq17 = undefined
+leq17 = leqN 17 5
 
 {-- Is it possible for all adventurers to be on the other side
 in < 17 min ? --}
 -- To implement
 l17 :: Bool
-l17 = undefined
+l17 = leqN 16 5
 
 
 --------------------------------------------------------------------------
@@ -133,13 +146,10 @@ instance Applicative ListDur where
 -- To implement
 instance Monad ListDur where
    return = pure
-<<<<<<< Updated upstream
    l >>= k = LD $ do x <- map remDur (remLD l)
                      g x where
                         g(n,x) = let u = (map remDur (remLD (k x))) in map (\(n',x) -> Duration (n + n', x)) u
-=======
-   l >>= k = undefined
->>>>>>> Stashed changes
+
 
 manyChoice :: [ListDur a] -> ListDur a
 manyChoice = LD . concat . (map remLD)
