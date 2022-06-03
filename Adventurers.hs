@@ -66,7 +66,7 @@ cross_Adventures :: [Objects] -> State -> Duration State
 cross_Adventures a s= let o = [(Right ())]++a
                           a_ = map obtain_adventure a  
                           t_ = map getTimeAdv a_
-                          b = verify_side o s in if b then  Duration (maximum t_ ,(mChangeState o s)) else return s
+                          b = verify_side o s in if b then Duration (maximum t_ ,(mChangeState o s)) else return s
 
 oneAdventurer = [(Left P1),(Left P2),(Left P5),(Left P10)]
 
@@ -78,7 +78,7 @@ twoAdventurers = obtain_twoAdveturers oneAdventurer
 
 
 allValidPlays :: State -> ListDur State
-allValidPlays s = let oneL = map (\x->cross_Adventures [x] s) oneAdventurer
+allValidPlays s = let oneL = map (\x->cross_Adventures [x] s) [(Left P1),(Left P2)]
                       twoL = map (\x->cross_Adventures x s) twoAdventurers in LD (oneL++twoL)
 
 
@@ -98,7 +98,7 @@ verify_result :: Int -> ListDur State -> Bool
 verify_result n ld = let o = oneAdventurer ++ [(Right ())]
                          ld_ = remLD ld
                          d = map remDur ld_ 
-                         b_ = map (\(t,s)-> (t<=n && all (\y->s y ==True) o)) d in all (\x->x==True) b_
+                         b_ = map (\(t,s)-> (t<=n && all (\y->s y ==True) o)) d in any (\x->x==True) b_
 
 leqN :: Int -> Int -> Bool
 leqN n_ 0 = False
