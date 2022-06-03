@@ -118,17 +118,21 @@ remLD (LD x) = x
 
 -- To implement
 instance Functor ListDur where
-   fmap f = undefined
+   fmap f = let f' = \(n,x) -> (n, f x) in LD . (map f') . remLD
 
 -- To implement
 instance Applicative ListDur where
-   pure x = undefined
-   l1 <*> l2 = undefined
+   pure x = LD [(0,x)]
+   l1 <*> l2 = LD $ do x <- remLD l1
+                       y <- remLD l2
+                       g(x,y) where g((n,f),(n',x)) = return (n+n',f x)
 
 -- To implement
 instance Monad ListDur where
-   return = undefined
-   l >>= k = undefined
+   return = pure
+   l >>= k = LD $ do x <- remLD l
+                     g x where
+                        g(n,x) = let u = (remLD (k x)) in map (\(n',x) -> (n + n', x)) u
 
 manyChoice :: [ListDur a] -> ListDur a
 manyChoice = LD . concat . (map remLD)
