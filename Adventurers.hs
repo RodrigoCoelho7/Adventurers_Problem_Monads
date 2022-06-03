@@ -74,11 +74,6 @@ obtain_twoAdveturers (h:t) = (map (\x -> [h,x]) t) ++ (obtain_twoAdveturers t)
 
 twoAdventurers = obtain_twoAdveturers oneAdventurer
 
-remDur :: Duration State -> (Int, State)
-remDur (Duration (n,s)) = (n,s)
-
-createDur :: Int -> (Int,State) -> Duration State
-createDur m (n,s) = Duration (m+n,s)
 
 msum :: Int -> Duration State -> Duration State
 msum n t= let t' = remDur t in createDur n t'
@@ -117,22 +112,30 @@ remLD :: ListDur a -> [Duration a]
 remLD (LD x) = x
 
 -- To implement
+
+remDur :: Duration a -> (Int,a)
+remDur x = (getDuration x, getValue x)
+
+insert_dur :: (Int,a) -> Duration a
+insert_dur (n,x) = Duration (n,x)
+
 instance Functor ListDur where
-   fmap f = let f' = \(n,x) -> (n, f x) in LD . (map f') . remLD
+   fmap f = let f' = \(n,x) -> (n, f x) in 
+                   LD . (map insert_dur) . (map f') . (map remDur) . remLD
 
 -- To implement
 instance Applicative ListDur where
-   pure x = LD [(0,x)]
-   l1 <*> l2 = LD $ do x <- remLD l1
-                       y <- remLD l2
-                       g(x,y) where g((n,f),(n',x)) = return (n+n',f x)
+   pure x = LD [Duration (0,x)]
+   l1 <*> l2 = LD $ do x <- map remDur (remLD l1)
+                       y <- map remDur (remLD l2)
+                       g(x,y) where g((n,f),(n',x)) = return (Duration (n+n',f x))
 
 -- To implement
 instance Monad ListDur where
    return = pure
-   l >>= k = LD $ do x <- remLD l
+   l >>= k = LD $ do x <- map remDur (remLD l)
                      g x where
-                        g(n,x) = let u = (remLD (k x)) in map (\(n',x) -> (n + n', x)) u
+                        g(n,x) = let u = (map remDur (remLD (k x))) in map (\(n',x) -> Duration (n + n', x)) u
 
 manyChoice :: [ListDur a] -> ListDur a
 manyChoice = LD . concat . (map remLD)
