@@ -59,26 +59,26 @@ possible moves that the adventurers can make.  --}
 verify_side :: [Objects] -> State -> Bool
 verify_side (h:t) s = let b = s h in all (\x->s x==b) t
 
-obtain_adventure :: Objects -> Adventurer
-obtain_adventure (Left a) = a
+obtain_adventurer :: Objects -> Adventurer
+obtain_adventurer (Left a) = a
 
 cross_Adventures :: [Objects] -> State -> Duration State
 cross_Adventures a s= let o = [(Right ())]++a
-                          a_ = map obtain_adventure a  
+                          a_ = map obtain_adventurer a  
                           t_ = map getTimeAdv a_
                           b = verify_side o s in if b then Duration (maximum t_ ,(mChangeState o s)) else return s
 
 oneAdventurer = [(Left P1),(Left P2),(Left P5),(Left P10)]
 
-obtain_twoAdveturers :: [Objects] -> [[Objects]]
-obtain_twoAdveturers [] = []
-obtain_twoAdveturers (h:t) = (map (\x -> [h,x]) t) ++ (obtain_twoAdveturers t)
+obtain_twoAdventurers :: [Objects] -> [[Objects]]
+obtain_twoAdventurers [] = []
+obtain_twoAdventurers (h:t) = (map (\x -> [h,x]) t) ++ (obtain_twoAdventurers t)
 
-twoAdventurers = obtain_twoAdveturers oneAdventurer
+twoAdventurers = obtain_twoAdventurers oneAdventurer
 
 
 allValidPlays :: State -> ListDur State
-allValidPlays s = let oneL = map (\x->cross_Adventures [x] s) [(Left P1),(Left P2)]
+allValidPlays s = let oneL = map (\x->cross_Adventures [x] s) oneAdventurer
                       twoL = map (\x->cross_Adventures x s) twoAdventurers in LD (oneL++twoL)
 
 
@@ -110,6 +110,7 @@ leq17 = leqN 17 5
 
 {-- Is it possible for all adventurers to be on the other side
 in < 17 min ? --}
+--Esta função não está bem implementada, é preciso provar que nunca pode ser menor do que 17 independentemente do numero de jogadas 
 -- To implement
 l17 :: Bool
 l17 = leqN 16 5
@@ -148,7 +149,7 @@ instance Monad ListDur where
    return = pure
    l >>= k = LD $ do x <- map remDur (remLD l)
                      g x where
-                        g(n,x) = let u = (map remDur (remLD (k x))) in map (\(n',x) -> Duration (n + n', x)) u
+                        g(n,a) = let u = (map remDur (remLD (k a))) in map (\(n',a) -> Duration (n + n', a)) u
 
 
 manyChoice :: [ListDur a] -> ListDur a
