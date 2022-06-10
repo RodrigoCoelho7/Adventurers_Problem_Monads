@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
-module Adventurers where
+module Adventurers_Optimization where
 
-import DurationMonad
+import DurationStringMonad
 
 -- The list of adventurers
 data Adventurer = P1 | P2 | P5 | P10 deriving (Show,Eq)
@@ -62,11 +62,21 @@ verify_side (h:t) s = let b = s h in all (\x->s x==b) t
 obtain_adventurer :: Objects -> Adventurer
 obtain_adventurer (Left a) = a
 
-cross_Adventures :: [Objects] -> State -> Duration State
+getString_aux :: [Objects] -> State -> String
+getString_aux [] s = ""
+getString_aux (h:t) s = " "++(show (obtain_adventurer h))++ (getString_aux t s)++" "
+
+getSide :: Objects -> State -> String
+getSide a s = let b = s a in if b then "L" else "R"
+
+getStrings :: [Objects] -> State -> String
+getStrings (h:t) s = " -"++(getSide h s)++"[ "++(getString_aux (h:t) s)++ "]"
+
+cross_Adventures :: [Objects] -> State -> (DS State,Bool)
 cross_Adventures a s= let o = [(Right ())]++a
                           a_ = map obtain_adventurer a  
                           t_ = map getTimeAdv a_
-                          b = verify_side o s in if b then Duration (maximum t_ ,(mChangeState o s)) else return s
+                          b = verify_side o s in if b then (DS (maximum t_ , (getStrings a s),(mChangeState o s)),b) else (DS (0,"",s),b)
 
 oneAdventurer = [(Left P1),(Left P2),(Left P5),(Left P10)]
 
@@ -76,19 +86,24 @@ obtain_twoAdventurers (h:t) = (map (\x -> [h,x]) t) ++ (obtain_twoAdventurers t)
 
 twoAdventurers = obtain_twoAdventurers oneAdventurer
 
+removeBool :: (DS a, Bool) -> DS a
+removeBool (d,b) = d
 
 allValidPlays :: State -> ListDur State
 allValidPlays s = let oneL = map (\x->cross_Adventures [x] s) oneAdventurer
-                      twoL = map (\x->cross_Adventures x s) twoAdventurers in LD (oneL++twoL)
-
+                      twoL = map (\x->cross_Adventures x s) twoAdventurers in LD (map removeBool (filter (\(d,b)->b) (oneL++twoL)))
+ 
 
 {-- For a given number n and initial state, the function calculates
 all possible n-sequences of moves that the adventures can make --}
 -- To implement 
-exec :: Int -> State -> ListDur State
-exec 0 s = return s
-exec n s = do s1 <- allValidPlays s
-              exec (n-1) s1
+
+
+exec :: Int -> Int -> State -> ListDur State
+exec 0 t s = return s
+exec n t s = do s1 <- allValidPlays s
+                exec (n-1) t s1
+   
 
 {-- Is it possible for all adventurers to be on the other side
 in <=17 min and not exceeding 5 moves ? --}
@@ -98,12 +113,21 @@ verify_result :: Int -> ListDur State -> Bool
 verify_result n ld = let o = oneAdventurer ++ [(Right ())]
                          ld_ = remLD ld
                          d = map remDur ld_ 
-                         b_ = map (\(t,s)-> (t<=n && all (\y->s y ==True) o)) d in any (\x->x==True) b_
+                         b_ = map (\(t,st,s)-> (t<=n && all (\y->s y ==True) o)) d in any (\x->x==True) b_
 
 leqN :: Int -> Int -> Bool
 leqN n_ 0 = False
-leqN n_ n = let ld = exec n gInit
+leqN n_ n = let ld = exec n n_ gInit
                 b = verify_result n_ ld in b || leqN n_ (n-1)
+
+findNaux :: Int -> Int -> Int -> Maybe (ListDur State)
+findNaux i t n = if i==n+1 then Nothing else let o = oneAdventurer ++ [(Right ())]
+                                                 b = leqN t i
+                                                 l = exec i t gInit 
+                                                 d = map remDur (remLD l) in if b then Just (LD (map insert_dur (filter (\(t',st,s)-> (t'<=t && all (\y->s y ==True) o)) d))) else findNaux (i+1) t n
+
+findN :: Int -> Int -> Maybe (ListDur State)
+findN t n = findNaux 1 t n
 
 leq17 :: Bool
 leq17 = leqN 17 5
@@ -112,56 +136,44 @@ leq17 = leqN 17 5
 in < 17 min ? --}
 --Esta função não está bem implementada, é preciso provar que nunca pode ser menor do que 17 independentemente do numero de jogadas 
 -- To implement
-lNaux :: Int -> Int -> Bool
-lNaux i t = let o = oneAdventurer ++ [(Right ())]
-                ld = exec i gInit
-                ld_ = remLD ld
-                d = map remDur ld_ 
-                b_ = map (\(t,s)-> (all (\y->s y ==True) o)) d
-                b' = any (\x->x==True) b_ 
-                b'' = map (\(t',s)-> (t'<t && all (\y->s y ==True) o)) d in if b' then any (\x->x==True) b'' else lNaux (i+1) t
-
-lN :: Int -> Bool
-lN t = lNaux 1 t
-
 l17 :: Bool
-l17 = lNaux 1 17
+l17 = leqN 16 5
 
 
 --------------------------------------------------------------------------
 {-- Implementation of the monad used for the problem of the adventurers.
 Recall the Knight's quest --}
 
-data ListDur a = LD [Duration a] deriving Show
+data ListDur a = LD [DS a] deriving Show
 
-remLD :: ListDur a -> [Duration a]
+remLD :: ListDur a -> [DS a]
 remLD (LD x) = x
 
 -- To implement
 
-remDur :: Duration a -> (Int,a)
-remDur x = (getDuration x, getValue x)
+remDur :: DS a -> (Int,String,a)
+remDur x = (getDuration x, getString x, getValue x)
 
-insert_dur :: (Int,a) -> Duration a
-insert_dur (n,x) = Duration (n,x)
+insert_dur :: (Int,String,a) -> DS a
+insert_dur (n,s,x) = DS (n,s,x)
 
 instance Functor ListDur where
-   fmap f = let f' = \(n,x) -> (n, f x) in 
+   fmap f = let f' = \(n,s,x) -> (n, s, f x) in 
                    LD . (map insert_dur) . (map f') . (map remDur) . remLD
 
 -- To implement
 instance Applicative ListDur where
-   pure x = LD [Duration (0,x)]
+   pure x = LD [DS (0,"",x)]
    l1 <*> l2 = LD $ do x <- map remDur (remLD l1)
                        y <- map remDur (remLD l2)
-                       g(x,y) where g((n,f),(n',x)) = return (Duration (n+n',f x))
+                       g(x,y) where g((n,s,f),(n',s',x)) = return (DS (n+n',s++s',f x))
 
 -- To implement
 instance Monad ListDur where
    return = pure
    l >>= k = LD $ do x <- map remDur (remLD l)
                      g x where
-                        g(n,a) = let u = (map remDur (remLD (k a))) in map (\(n',a) -> Duration (n + n', a)) u
+                        g(n,s,a) = let u = (map remDur (remLD (k a))) in map (\(n',s',a) -> DS (n + n', s++s',a)) u
 
 
 manyChoice :: [ListDur a] -> ListDur a
