@@ -85,6 +85,15 @@ allValidPlays s = let oneL = map (\x->cross_Adventures [x] s) oneAdventurer
 {-- For a given number n and initial state, the function calculates
 all possible n-sequences of moves that the adventures can make --}
 -- To implement 
+calc_length :: ListDur a -> Int
+calc_length ld = length $ remLD ld
+
+exec_evaluate_aux ::  Int -> Int -> State -> Int
+exec_evaluate_aux  i n  s = if i == (n+1) then 0 else (calc_length (exec i s)) + exec_evaluate_aux (i+1) n s
+
+exec_evaluate :: Int -> State -> Int
+exec_evaluate n s = exec_evaluate_aux 1 n s
+
 exec :: Int -> State -> ListDur State
 exec 0 s = return s
 exec n s = do s1 <- allValidPlays s
