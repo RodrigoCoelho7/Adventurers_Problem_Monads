@@ -99,11 +99,14 @@ all possible n-sequences of moves that the adventures can make --}
 -- To implement 
 
 
+
 exec :: Int -> Int -> State -> ListDur State
-exec 0 t s = return s
-exec n t s = do s1 <- allValidPlays s
-                exec (n-1) t s1
+exec 0 _ s = return s
+exec n t s = teste t $ do s1 <- allValidPlays s
+                          exec (n-1) t s1
    
+teste :: Int ->  ListDur State -> ListDur State
+teste t l = LD $filter (\x->(getDuration x) <= t) $remLD l
 
 {-- Is it possible for all adventurers to be on the other side
 in <=17 min and not exceeding 5 moves ? --}
